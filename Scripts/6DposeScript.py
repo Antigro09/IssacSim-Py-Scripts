@@ -15,8 +15,11 @@ else:
 
 # Define your object prim paths (example coral and algae)
 base_field_prim_path = "/World/FE_2025/tn__FE2025_c9/tn__FullFidelityField_rHD"
+coral_prim_paths = [(base_field_prim_path + "/Coral/Mesh_" + str(i)) for i in range(0, 150)]
+coral_dynamic_prim_paths = [(base_field_prim_path + "/Coral/Mesh_" + str(i)) for i in range(126, 150)]
 coral_static_prim_paths = [(base_field_prim_path + "/Coral/Mesh_" + str(i)) for i in range(0, 6)]
 algae_static_prim_paths = [(base_field_prim_path + "/Algae/Mesh_" + str(i)) for i in range(0, 6)]
+algae_prim_paths = [(base_field_prim_path + "/Algae/Mesh_" + str(i)) for i in range(0, 34)]
 
 # Prims to look at for camera targeting
 potential_look_prims = [
@@ -26,7 +29,7 @@ potential_look_prims = [
     base_field_prim_path + "/Barge/BlueCageInner",
     base_field_prim_path + "/Barge/BlueCageMiddle",
     base_field_prim_path + "/Barge/BlueCageOuter"
-] + coral_static_prim_paths + algae_static_prim_paths
+] + coral_static_prim_paths + coral_dynamic_prim_paths + algae_prim_paths
 
 camera = rep.create.camera()
 with rep.trigger.on_frame(rt_subframes=4):
@@ -35,7 +38,6 @@ with rep.trigger.on_frame(rt_subframes=4):
             position=rep.distribution.uniform((-8.5, -4.2, 0.3), (8.5, 4.2, 5)),
             look_at=rep.distribution.choice(potential_look_prims)
         )
-
 
     # Randomize lighting
     light = rep.get.prim_at_path("/Environment/RectLight")
@@ -46,12 +48,22 @@ with rep.trigger.on_frame(rt_subframes=4):
             rep.modify.attribute(name="inputs:color", value=rep.distribution.uniform((0.7, 0.7, 0.7), (1, 1, 1)))
 
     # Randomize visibility of static objects
-    for coral_path in coral_static_prim_paths:
-        coral = rep.get.prim_at_path(coral_path)
-        rep.modify.visibility(rep.distribution.choice(choices=[True, False, False, False]), input_prims=coral)
-    for algae_path in algae_static_prim_paths:
-        algae = rep.get.prim_at_path(algae_path)
-        rep.modify.visibility(rep.distribution.choice(choices=[True, False, False, False]), input_prims=algae)
+    for i in range(0, 6):
+        coral = rep.get.prim_at_path(coral_static_prim_paths[i])
+        algae = rep.get.prim_at_path(algae_static_prim_paths[i])
+        visible = rep.distribution.choice(choices=[True, False, False, False, False, False])
+        rep.modify.visibility(visible, input_prims=coral)
+        rep.modify.visibility(visible, input_prims=algae)
+    for coral_prim_path in coral_prim_paths:
+        if coral_prim_path not in coral_static_prim_paths:
+            coral = rep.get.prim_at_path(coral_prim_path)
+            with coral:
+                rep.modify.visibility(rep.distribution.choice(choices=[True, False, False, False, False, False, False, False, False, False]))
+    for algae_prim_path in algae_prim_paths:
+        if algae_prim_path not in algae_static_prim_paths:
+            algae = rep.get.prim_at_path(algae_prim_path)
+            with algae:
+                rep.modify.visibility(rep.distribution.choice(choices=[True, False, False, False, False]))
 
 # Render 512x512 RGB images from the camera
 render_product = rep.create.render_product(camera, (512, 512))
@@ -59,8 +71,16 @@ render_product = rep.create.render_product(camera, (512, 512))
 # Initialize PoseWriter (outputs 6D pose + keypoints + bbox + segmentation etc)
 pose_writer = rep.WriterRegistry.get("PoseWriter")
 pose_writer.initialize(
-    output_dir="C:\\User\\antho\\Documents\\Issac-Sim-Data\\",
+    output_dir="C:\\Users\\antho\\Documents\\Issac-Sim-Data\\",
     # Optionally specify object filtering, camera intrinsics, etc.
+    rgb=True,                      # RGB images (essential)
+    semantic_segmentation=True,    # Object masks (important for GigaPose)
+    instance_segmentation=True,    # Individual object instances
+    bounding_box_2d_tight=True,    # 2D bounding boxes
+    bounding_box_3d=True,          # 6D pose data (critical for GigaPose)
+    camera_params=True,            # Camera intrinsics (essential)
+    distance_to_camera=True,       # Depth information (useful)
+    occlusion=True
 )
 pose_writer.attach([render_product])
 
