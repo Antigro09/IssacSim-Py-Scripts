@@ -73,7 +73,6 @@ pose_writer = rep.WriterRegistry.get("PoseWriter")
 pose_writer.initialize(
     output_dir="C:\\Users\\antho\\Documents\\Issac-Sim-Data\\",
     # Optionally specify object filtering, camera intrinsics, etc.
-    rgb=True,                      # RGB images (essential)
     semantic_segmentation=True,    # Object masks (important for GigaPose)
     instance_segmentation=True,    # Individual object instances
     bounding_box_2d_tight=True,    # 2D bounding boxes
